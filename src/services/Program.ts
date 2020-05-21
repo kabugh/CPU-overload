@@ -29,6 +29,7 @@ export class Program {
   
     private savedNumberOfProcesses: number;
     private savedResults: Strategy[];
+    private isOverloaded: boolean;
     private interval: any;
 
     constructor(
@@ -68,6 +69,7 @@ export class Program {
         this.savedResults = [new Strategy(), new Strategy(), new Strategy()];
         this.results = [];
         this.compareStrategies = compareStrategies;
+        this.isOverloaded = false;
 
         this.processors = [];
         for (let i = 0; i < numberOfProcessors; i++)
@@ -202,10 +204,10 @@ export class Program {
         } else processor.getProcesses.push(process);
     }
 
-    public thirdStrategy(): void {
-        for (let j = 0; j < this.processors.length; j++)
-            this.thirdStrategyProcessor(this.processors[j]);
-    }
+    // public thirdStrategy(): void {
+    //     for (let j = 0; j < this.processors.length; j++)
+    //         this.thirdStrategyProcessor(this.processors[j]);
+    // }
 
     public thirdStrategyProcess(process: Process): void {
         if (process != null) {
@@ -241,6 +243,7 @@ export class Program {
                 0,
                 this.processors[randomIndex].getProcesses.length
               );
+
               const process: Process = this.processors[randomIndex]
                 .getProcesses[index];
               this.processors[randomIndex].getProcesses.splice(index, 1);

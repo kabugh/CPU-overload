@@ -131,7 +131,7 @@ export default class App extends Vue {
   options: any = {
     numberOfProcesses: {
       value: 75,
-      name: "Ilość procesów"
+      name: "Ilość procesorów"
     },
     minProcesses: {
       value: 50,
