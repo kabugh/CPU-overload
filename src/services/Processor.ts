@@ -6,15 +6,15 @@ export class Processor {
         this.processes = [];
     }
 
-    public get load(): number {
+    public get getLoad(): number {
         let sum = 0;
-        this.processes.forEach(process => sum += +process.getRequirement)
+        this.processes.forEach(process => sum += +process.getPower)
         return Math.min(100, sum);
     }
 
     public workAmount(): number {
         let sum = 0;
-        this.processes.forEach(process => sum += +process.getLength);
+        this.processes.forEach(process => sum += +process.getTacts);
         return sum;
     }
 
@@ -22,14 +22,14 @@ export class Processor {
         let powerLeft = 100;
         this.processes.forEach(process => {
             if (
-              !(process.getLength <= 0) &&
-              powerLeft >= +process.getRequirement
+              !(process.getTacts <= 0) &&
+              powerLeft >= +process.getPower
             ) {
               process.doWork();
-              powerLeft -= process.getRequirement;
+              powerLeft -= process.getPower;
             }
         })
-        this.processes.filter(process => !(process.getLength <= 0));
+        this.processes.filter(process => !(process.getTacts <= 0));
     }
 
     public get getProcesses() {

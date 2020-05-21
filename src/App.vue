@@ -19,9 +19,10 @@
         <div class="input__wrapper">
           <label for="numberOfProcesses">{{ chosenMode.name }}</label>
           <select id="pet-select" v-model="chosenMode.value">
-            <option value="0">0</option>
-            <option value="1">1</option>
-            <option value="2">2</option>
+            <option value="0">1</option>
+            <option value="1">2</option>
+            <option value="2">3</option>
+            <option value="3">Porównaj wszystkie</option>
           </select>
         </div>
       </div>
@@ -30,18 +31,54 @@
         <button @click="stopSimulation">Stop</button>
       </div>
       <div class="results__container">
-        <p v-if="program.displayResults && program.results[0]">
-          Średnie obciążenie: {{ program.results[0] | percentage }}
-        </p>
-        <p v-if="program.displayResults && program.results[1]">
-          Średnie odchylenie: {{ program.results[1] | percentage }}
-        </p>
-        <p v-if="program.queries > 0">
-          Ilość zapytań o obciążenie: {{ program.queries }}
-        </p>
-        <p v-if="program.migrations > 0">
-          Ilość migracji: {{ program.migrations }}
-        </p>
+        <div
+          class="detailedResults__wrapper"
+          v-for="(result, j) in program.savedResults"
+          :key="j"
+        >
+          <div
+            class="detailedResults"
+            v-if="
+              program.displayResults &&
+                program.savedResults[j].getMigrations > 0
+            "
+          >
+            <h3>Rezultaty dla strategii {{ j + 1 }}</h3>
+            <p>
+              Średnie obciążenie:
+              {{ program.savedResults[j].getAverageLoad | fixedDecimal }}
+            </p>
+            <p>
+              Średnie odchylenie:
+              {{ program.savedResults[j].getAverageBias | fixedDecimal }}
+            </p>
+            <p>
+              Ilość zapytań o obciążenie:
+              {{ program.savedResults[j].getQueries }}
+            </p>
+            <p>
+              Ilość migracji:
+              {{ program.savedResults[j].getMigrations }}
+            </p>
+          </div>
+        </div>
+        <div class="currentDetails" v-if="!program.displayResults">
+          <h3 v-if="program.queries > 0 || program.processCounter > 0">
+            Symulacja {{ program.chosenMode + 1 }}
+          </h3>
+          <p v-if="program.queries > 0">
+            Ilość zapytań o obciążenie: {{ program.queries }}
+          </p>
+          <p v-if="program.migrations > 0">
+            Ilość migracji: {{ program.migrations }}
+          </p>
+          <p v-if="program.processCounter > 0">
+            Ilość wygenerowanych procesów: {{ this.numberOfProcesses }}
+          </p>
+          <p v-if="program.processCounter > 0">
+            Pozostało procesów: {{ program.processCounter }}
+          </p>
+        </div>
       </div>
     </div>
 
@@ -49,17 +86,19 @@
       <div
         class="processor"
         v-for="(processor, i) in program.processors"
+        @click="showDetails(processor)"
         :key="i"
         :class="{
-          light: processor.load < 15,
-          moderate: processor.load >= 15 && processor.load < 50,
-          high: processor.load >= 50 && processor.load < 80,
-          critical: processor.load >= 80
+          idle: processor.getLoad < 5,
+          light: processor.getLoad >= 5 && processor.getLoad < 15,
+          moderate: processor.getLoad >= 15 && processor.getLoad < 50,
+          high: processor.getLoad >= 50 && processor.getLoad < 80,
+          critical: processor.getLoad >= 80
         }"
       >
         <div class="content">
           <p>Procesor: {{ i + 1 }}</p>
-          <p>Obciążenie: {{ processor.load }} %</p>
+          <p>Obciążenie: {{ processor.getLoad }} %</p>
           <p>Procesy: {{ processor.getProcesses.length }}</p>
         </div>
       </div>
@@ -70,6 +109,7 @@
 <script lang="ts">
 import { Component, Vue } from "vue-property-decorator";
 import { Program } from "./services/Program";
+import { Processor } from "./services/Processor";
 
 interface Option {
   value: string;
@@ -77,12 +117,12 @@ interface Option {
 }
 @Component({
   filters: {
-    percentage: (val: number): string =>
-      `${Math.round((val / 100) * 100) / 100} %`
+    fixedDecimal: (val: number) =>
+      `${(Math.round(val * 100) / 100).toFixed(2)} %`
   }
 })
 export default class App extends Vue {
-  options = {
+  options: any = {
     numberOfProcesses: {
       value: 75,
       name: "Ilość procesów"
@@ -118,26 +158,38 @@ export default class App extends Vue {
     name: "Wybór symulacji"
   };
 
+  numberOfProcesses = 0;
+  compareSimulations = false;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   program: any = {};
 
   runSimulation() {
+    if (+this.chosenMode.value == 3) {
+      this.compareSimulations = true;
+    } else {
+      this.compareSimulations = false;
+    }
     this.program = new Program(
-      this.options.numberOfProcesses.value,
-      this.options.minProcesses.value,
-      this.options.maxProcesses.value,
-      false,
-      this.options.valueOfP.value,
-      this.options.valueOfR.value,
-      this.options.numberOfTries.value,
-      this.options.valueOfZ.value,
+      parseInt(this.options.numberOfProcesses.value),
+      parseInt(this.options.minProcesses.value),
+      parseInt(this.options.maxProcesses.value),
+      this.compareSimulations,
+      parseInt(this.options.valueOfP.value),
+      parseInt(this.options.valueOfR.value),
+      parseInt(this.options.numberOfTries.value),
+      parseInt(this.options.valueOfZ.value),
       parseInt(this.chosenMode.value)
     );
+    this.numberOfProcesses = this.program.processCounter;
     this.program.runSimulation();
   }
 
   stopSimulation() {
     this.program.stop();
+  }
+
+  showDetails(processor: Processor) {
+    console.log(processor);
   }
 }
 </script>
@@ -203,6 +255,17 @@ body {
   }
   .results__container {
     padding: 2vh 0;
+    display: grid;
+    justify-content: center;
+    align-items: center;
+    grid-template-columns: 1fr;
+    text-align: center;
+    .finished {
+      @media (min-width: 1000px) {
+        column-gap: 4vw;
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
   }
 }
 .processors__container {
@@ -227,6 +290,10 @@ body {
     transition: all 0.2s ease-in-out;
     p {
       margin: 0;
+      white-space: nowrap;
+    }
+    &.idle {
+      background-color: #2fe197;
     }
     &.light {
       background-color: #26c281;

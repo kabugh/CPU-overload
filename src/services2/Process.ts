@@ -1,10 +1,16 @@
 export class Process {
+    private id: number;
     private power: number;
     private tacts: number;
 
-    constructor(power: number, tacts: number) {
+    constructor(power: number, tacts: number, id?: number) {
         this.power = power;
         this.tacts = tacts;
+        this.id = id || 0;
+    }
+
+    public get getId(): number {
+        return this.id;
     }
 
     public get getPower(): number {
@@ -15,15 +21,7 @@ export class Process {
         return this.tacts;
     }
 
-    public set setTacts(tacts: number) {
-        this.tacts = tacts;
-    }
-
     public doWork(): void {
         this.tacts--;
-    }
-
-    public get isDone(): boolean {
-        return this.tacts <= 0;
     }
 }
