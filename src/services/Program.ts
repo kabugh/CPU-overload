@@ -218,7 +218,6 @@ export class Program {
     }
 
     public thirdStrategyProcessor(processor: Processor): void {
-        // this.queries++;
         if (
           processor.getLoad < this.valueOfR &&
           processor.getLoad < this.valueOfP
@@ -280,8 +279,8 @@ export class Program {
             const previousLoad: number = processor.getLoad;
             this.load.push(processor.getLoad / 100);
             processor.doWork();
-            if (mode == 2 && processor.getLoad != previousLoad)
-              this.thirdStrategy();
+            // if (mode == 2 && processor.getLoad != previousLoad)
+            //   this.thirdStrategy();
         });
         if (this.isDone() || this.processCounter == 0) {
             //  if (this.isDone()) {

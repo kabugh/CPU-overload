@@ -28,7 +28,12 @@
       </div>
       <div class="buttons__container">
         <button @click="runSimulation">Start</button>
-        <button @click="stopSimulation">Stop</button>
+        <button
+          @click="stopSimulation"
+          v-if="Object.keys(this.program).length > 0 && !program.displayResults"
+        >
+          Stop
+        </button>
       </div>
       <div class="results__container">
         <div
@@ -44,14 +49,7 @@
             "
           >
             <h3>Rezultaty dla strategii {{ j + 1 }}</h3>
-            <p>
-              Średnie obciążenie:
-              {{ program.savedResults[j].getAverageLoad | fixedDecimal }}
-            </p>
-            <p>
-              Średnie odchylenie:
-              {{ program.savedResults[j].getAverageBias | fixedDecimal }}
-            </p>
+
             <p>
               Ilość zapytań o obciążenie:
               {{ program.savedResults[j].getQueries }}
@@ -59,6 +57,14 @@
             <p>
               Ilość migracji:
               {{ program.savedResults[j].getMigrations }}
+            </p>
+            <p>
+              Średnie obciążenie:
+              {{ program.savedResults[j].getAverageLoad | fixedDecimal }}
+            </p>
+            <p>
+              Średnie odchylenie:
+              {{ program.savedResults[j].getAverageBias | fixedDecimal }}
             </p>
           </div>
         </div>
@@ -73,7 +79,7 @@
             Ilość migracji: {{ program.migrations }}
           </p>
           <p v-if="program.processCounter > 0">
-            Ilość wygenerowanych procesów: {{ this.numberOfProcesses }}
+            Ilość wygenerowanych procesów: {{ program.savedNumberOfProcesses }}
           </p>
           <p v-if="program.processCounter > 0">
             Pozostało procesów: {{ program.processCounter }}
@@ -158,7 +164,6 @@ export default class App extends Vue {
     name: "Wybór symulacji"
   };
 
-  numberOfProcesses = 0;
   compareSimulations = false;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   program: any = {};
@@ -180,7 +185,6 @@ export default class App extends Vue {
       parseInt(this.options.valueOfZ.value),
       parseInt(this.chosenMode.value)
     );
-    this.numberOfProcesses = this.program.processCounter;
     this.program.runSimulation();
   }
 
@@ -237,12 +241,14 @@ body {
     }
   }
   .buttons__container {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(10vw, 20vw));
-    column-gap: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     margin: 20px 0;
     button {
-      padding: 8px;
+      padding: 12px;
+      min-width: 10vw;
+      margin: 0 4px;
       background-color: black;
       color: white;
       transition: all 0.5s ease-in-out;
@@ -260,10 +266,15 @@ body {
     align-items: center;
     grid-template-columns: 1fr;
     text-align: center;
-    .finished {
-      @media (min-width: 1000px) {
-        column-gap: 4vw;
-        grid-template-columns: repeat(3, 1fr);
+    p {
+      margin: 5px;
+    }
+    @media (min-width: 1000px) {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      .detailedResults {
+        margin: 2vh;
       }
     }
   }
