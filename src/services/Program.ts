@@ -245,7 +245,6 @@ export class Program {
           this.queries++;
           if (processor.getLoad + process.getPower <= 100) {
               processor.getProcesses.push(process);
-              this.isOverloaded = true;
           } else {
             this.overloadCounter++;
             if (

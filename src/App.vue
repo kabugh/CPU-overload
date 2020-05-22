@@ -185,7 +185,7 @@ export default class App extends Vue {
       name: "Ilość prób dla symulacji 1"
     },
     overloadCoefficient: {
-      value: 0.9,
+      value: 0.95,
       name: "Współczynnik przeciążenia",
       maxValue: 1
     }
