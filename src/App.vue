@@ -10,6 +10,15 @@
         >
           <label for="numberOfProcesses">{{ option.name }}</label>
           <input
+            v-if="!option.maxValue"
+            :name="option.name"
+            type="number"
+            v-model="option.value"
+            :placeholder="option.name"
+          />
+          <input
+            v-else
+            :max="option.maxValue"
             :name="option.name"
             type="number"
             v-model="option.value"
@@ -49,7 +58,10 @@
             "
           >
             <h3>Rezultaty dla strategii {{ j + 1 }}</h3>
-
+            <h4 v-if="program.isOverloaded">
+              Nastąpiło przeciążenie - nie udało się rozdzielić wszystkich
+              procesów
+            </h4>
             <p>
               Ilość zapytań o obciążenie:
               {{ program.savedResults[j].getQueries }}
@@ -68,7 +80,10 @@
             </p>
           </div>
         </div>
-        <div class="currentDetails" v-if="!program.displayResults">
+        <div
+          class="currentDetails"
+          v-if="!program.displayResults && !program.isOverloaded"
+        >
           <h3 v-if="program.queries > 0 || program.processCounter > 0">
             Symulacja {{ program.chosenMode + 1 }}
           </h3>
@@ -83,6 +98,21 @@
           </p>
           <p v-if="program.processCounter > 0">
             Pozostało procesów: {{ program.processCounter }}
+          </p>
+        </div>
+        <div
+          class="currentDetails"
+          v-else-if="program.isOverloaded && !program.displayResults"
+        >
+          <h3>
+            Procesory nie są w stanie obsłużyć tyle procesów. Przejście w tryb
+            przeciążenia!
+          </h3>
+          <p v-if="program.processCounter > 0">
+            Ilość wygenerowanych procesów: {{ program.savedNumberOfProcesses }}
+          </p>
+          <p v-if="program.processCounter > 0">
+            Pozostało procesów do sprawdzenia: {{ program.processCounter }}
           </p>
         </div>
       </div>
@@ -120,6 +150,7 @@ import { Processor } from "./services/Processor";
 interface Option {
   value: string;
   name: string;
+  maxValue?: number;
 }
 @Component({
   filters: {
@@ -153,9 +184,10 @@ export default class App extends Vue {
       value: 5,
       name: "Ilość prób dla symulacji 1"
     },
-    valueOfZ: {
-      value: 0,
-      name: "Wartość Z"
+    overloadCoefficient: {
+      value: 0.9,
+      name: "Współczynnik przeciążenia",
+      maxValue: 1
     }
   };
 
@@ -174,6 +206,7 @@ export default class App extends Vue {
     } else {
       this.compareSimulations = false;
     }
+    console.log(this.options.overloadCoefficient.value);
     this.program = new Program(
       parseInt(this.options.numberOfProcesses.value),
       parseInt(this.options.minProcesses.value),
@@ -182,7 +215,7 @@ export default class App extends Vue {
       parseInt(this.options.valueOfP.value),
       parseInt(this.options.valueOfR.value),
       parseInt(this.options.numberOfTries.value),
-      parseInt(this.options.valueOfZ.value),
+      parseFloat(this.options.overloadCoefficient.value),
       parseInt(this.chosenMode.value)
     );
     this.program.runSimulation();

@@ -12,7 +12,7 @@ export class Program {
     private valueOfP: number;
     private valueOfR: number;
     private numberOfTries: number;
-    private valueOfZ: number;
+    private overloadCoefficient: number;
     private chosenMode: number;
     private displayResults: boolean;
 
@@ -30,6 +30,7 @@ export class Program {
     private savedNumberOfProcesses: number;
     private savedResults: Strategy[];
     private isOverloaded: boolean;
+    private overloadCounter: number;
     private interval: any;
 
     constructor(
@@ -40,7 +41,7 @@ export class Program {
         valueOfP: number,
         valueOfR: number,
         numberOfTries: number,
-        valueOfZ: number,
+        overloadCoefficient: number,
         chosenMode: number
     ) {
         // dynamic parameters of a simulation
@@ -50,7 +51,7 @@ export class Program {
         this.valueOfP = valueOfP;
         this.valueOfR = valueOfR;
         this.numberOfTries = numberOfTries;
-        this.valueOfZ = valueOfZ;
+        this.overloadCoefficient = overloadCoefficient;
         this.chosenMode = chosenMode;
 
         if (this.chosenMode > 2) this.chosenMode = 0;
@@ -70,6 +71,7 @@ export class Program {
         this.results = [];
         this.compareStrategies = compareStrategies;
         this.isOverloaded = false;
+        this.overloadCounter = 0;
 
         this.processors = [];
         for (let i = 0; i < numberOfProcessors; i++)
@@ -125,6 +127,8 @@ export class Program {
             this.maxProcesses + 1
         );
         this.savedNumberOfProcesses = this.processCounter;
+        this.isOverloaded = false;
+        this.overloadCounter = 0;
 
         this.processors = [];
         for (let i = 0; i < this.numberOfProcessors; i++)
@@ -141,6 +145,8 @@ export class Program {
       this.generationLock = 0;
       this.processCounter = this.savedNumberOfProcesses;
       this.results = [];
+      this.isOverloaded = false;
+      this.overloadCounter = 0;
 
       this.processors = [];
       for (let i = 0; i < this.numberOfProcessors; i++)
@@ -169,16 +175,37 @@ export class Program {
             const send: number = this.getRandomInt(0, this.processors.length);
             const target: Processor = this.processors[send];
             this.queries++;
-            if (target.getLoad < this.valueOfP) {
+            if (target.getLoad < this.valueOfP && (target.getLoad + process.getPower <= 100)) {  //overload
               target.getProcesses.push(process);
               this.migrations++;
               isDone = true;
+            } else if (!(target.getLoad + process.getPower <= 100)) {
+              this.queries++;
+              this.overloadCounter++;
+              // if more than half of the processors get overloaded - the overload mode is turned on
+              if (
+                this.overloadCounter >
+                this.overloadCoefficient * this.numberOfProcessors
+              ) {
+                this.isOverloaded = true;
+              }
             }
         }
         if (!isDone) {
             const which: number = this.getRandomInt(0, this.processors.length);
             const processor: Processor = this.processors[which];
-            processor.getProcesses.push(process);
+            this.queries++;
+            if (processor.getLoad + process.getPower <= 100) //overload
+                processor.getProcesses.push(process);
+            else {
+              this.overloadCounter++;
+              if (
+                this.overloadCounter >
+                this.overloadCoefficient * this.numberOfProcessors
+              ) {
+                this.isOverloaded = true;
+              }
+            }    
         }
     }
 
@@ -200,8 +227,35 @@ export class Program {
             } while (+this.processors[randomIndex].getLoad >= this.valueOfP);
             this.processors[randomIndex].getProcesses.push(process);
             this.migrations++;
-          } else processor.getProcesses.push(process);
-        } else processor.getProcesses.push(process);
+          } else {
+            this.queries++;
+            if (processor.getLoad + process.getPower <= 100) {
+              processor.getProcesses.push(process);
+            } else {
+              this.overloadCounter++;
+              if (
+                this.overloadCounter >
+                this.overloadCoefficient * this.numberOfProcessors
+              ) {
+                this.isOverloaded = true;
+              }
+            }
+          } 
+        } else {
+          this.queries++;
+          if (processor.getLoad + process.getPower <= 100) {
+              processor.getProcesses.push(process);
+              this.isOverloaded = true;
+          } else {
+            this.overloadCounter++;
+            if (
+              this.overloadCounter >
+              this.overloadCoefficient * this.numberOfProcessors
+            ) {
+              this.isOverloaded = true;
+            }
+          }
+        }
     }
 
     // public thirdStrategy(): void {
@@ -213,7 +267,18 @@ export class Program {
         if (process != null) {
             const which: number = this.getRandomInt(0, this.processors.length);
             const processor: Processor = this.processors[which];
-            processor.getProcesses.push(process);
+            this.queries++;
+            if (processor.getLoad + process.getPower <= 100) {
+              processor.getProcesses.push(process);
+            } else {
+              this.overloadCounter++;
+              if (
+                this.overloadCounter >
+                this.overloadCoefficient * this.numberOfProcessors
+              ) {
+                this.isOverloaded = true;
+              }
+            }
         }
         for (let j = 0; j < this.processors.length; j++)
             this.thirdStrategyProcessor(this.processors[j]);
@@ -246,9 +311,20 @@ export class Program {
 
               const process: Process = this.processors[randomIndex]
                 .getProcesses[index];
-              this.processors[randomIndex].getProcesses.splice(index, 1);
-              processor.getProcesses.push(process);
-              this.migrations++;
+              this.queries++;
+              if (processor.getLoad + process.getPower <= 100) {
+                this.processors[randomIndex].getProcesses.splice(index, 1);
+                processor.getProcesses.push(process);
+                this.migrations++;
+              } else {
+                this.overloadCounter++;
+                if (
+                  this.overloadCounter >
+                  this.overloadCoefficient * this.numberOfProcessors
+                ) {
+                  this.isOverloaded = true;
+                }
+              }
             }
           });
         }
