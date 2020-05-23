@@ -1,6 +1,6 @@
 <template>
   <div id="app">
-    <h3>Symulacja rozproszonego alg. równoważącego obciążenie procesorów</h3>
+    <h3>Processors load balancing simulation</h3>
     <div class="controls__container">
       <div class="inputs__container">
         <div
@@ -31,7 +31,7 @@
             <option value="0">1</option>
             <option value="1">2</option>
             <option value="2">3</option>
-            <option value="3">Porównaj wszystkie</option>
+            <option value="3">Compare simulations</option>
           </select>
         </div>
       </div>
@@ -53,30 +53,32 @@
           <div
             class="detailedResults"
             v-if="
-              program.displayResults &&
-                program.savedResults[j].getMigrations > 0
+              program.displayResults && program.savedResults[j].getQueries > 0
             "
           >
-            <h3>Rezultaty dla strategii {{ j + 1 }}</h3>
+            <h3>Results of strategy {{ j + 1 }}</h3>
             <h4 v-if="program.isOverloaded">
-              Nastąpiło przeciążenie - nie udało się rozdzielić wszystkich
-              procesów
+              The overload has occured - failed to distribute all the processes
             </h4>
             <p>
-              Ilość zapytań o obciążenie:
+              Number of queries:
               {{ program.savedResults[j].getQueries }}
             </p>
             <p>
-              Ilość migracji:
+              Number of migrations:
               {{ program.savedResults[j].getMigrations }}
             </p>
             <p>
-              Średnie obciążenie:
+              Average load:
               {{ program.savedResults[j].getAverageLoad | fixedDecimal }}
             </p>
             <p>
-              Średnie odchylenie:
+              Average deviation:
               {{ program.savedResults[j].getAverageBias | fixedDecimal }}
+            </p>
+            <p>Number of processes: {{ program.savedNumberOfProcesses }}</p>
+            <p v-if="program.overloadCounter > 0">
+              Number of rejected processes: {{ program.overloadCounter }}
             </p>
           </div>
         </div>
@@ -85,19 +87,19 @@
           v-if="!program.displayResults && !program.isOverloaded"
         >
           <h3 v-if="program.queries > 0 || program.processCounter > 0">
-            Symulacja {{ program.chosenMode + 1 }}
+            Simulation {{ program.chosenMode + 1 }}
           </h3>
           <p v-if="program.queries > 0">
-            Ilość zapytań o obciążenie: {{ program.queries }}
+            Number of queries: {{ program.queries }}
           </p>
           <p v-if="program.migrations > 0">
-            Ilość migracji: {{ program.migrations }}
+            Number of migrations: {{ program.migrations }}
           </p>
           <p v-if="program.processCounter > 0">
-            Ilość wygenerowanych procesów: {{ program.savedNumberOfProcesses }}
+            Number of generated processes: {{ program.savedNumberOfProcesses }}
           </p>
           <p v-if="program.processCounter > 0">
-            Pozostało procesów: {{ program.processCounter }}
+            Processes left: {{ program.processCounter }}
           </p>
         </div>
         <div
@@ -105,17 +107,55 @@
           v-else-if="program.isOverloaded && !program.displayResults"
         >
           <h3>
-            Procesory nie są w stanie obsłużyć tyle procesów. Przejście w tryb
-            przeciążenia!
+            The processors are unable to balance so many processes. Entering
+            overload mode!
           </h3>
           <p v-if="program.processCounter > 0">
-            Ilość wygenerowanych procesów: {{ program.savedNumberOfProcesses }}
+            Number of generated processes: {{ program.savedNumberOfProcesses }}
           </p>
           <p v-if="program.processCounter > 0">
-            Pozostało procesów do sprawdzenia: {{ program.processCounter }}
+            Processes left to balance: {{ program.processCounter }}
+          </p>
+          <p v-if="program.overloadCounter > 0">
+            Number of rejected processes: {{ program.overloadCounter }}
           </p>
         </div>
       </div>
+      <transition
+        enter-active-class="enter-active"
+        leave-active-class="leave-active"
+        @before-enter="beforeEnter"
+        @enter="enter"
+        @after-enter="afterEnter"
+        @before-leave="beforeLeave"
+        @leave="leave"
+        @after-leave="afterLeave"
+      >
+        <div
+          class="spinner__container"
+          v-show="!program.displayResults && !(program.processCounter > 0)"
+        >
+          <p>The processes have been distributed.</p>
+          <p>Please wait while the tasks are still being processed.</p>
+          <svg
+            class="spinner"
+            width="35px"
+            height="35px"
+            viewBox="0 0 66 66"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <circle
+              class="path"
+              fill="none"
+              stroke-width="6"
+              stroke-linecap="round"
+              cx="33"
+              cy="33"
+              r="30"
+            ></circle>
+          </svg>
+        </div>
+      </transition>
     </div>
 
     <div class="processors__container">
@@ -133,9 +173,10 @@
         }"
       >
         <div class="content">
-          <p>Procesor: {{ i + 1 }}</p>
-          <p>Obciążenie: {{ processor.getLoad }} %</p>
-          <p>Procesy: {{ processor.getProcesses.length }}</p>
+          <p>Processor: {{ i + 1 }}</p>
+          <p>Current load: {{ processor.getLoad }} %</p>
+          <p>Processes: {{ processor.getProcesses.length }}</p>
+          <p>Tasks left: {{ processor.getNumberOfTasks }}</p>
         </div>
       </div>
     </div>
@@ -143,6 +184,7 @@
 </template>
 
 <script lang="ts">
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Component, Vue } from "vue-property-decorator";
 import { Program } from "./services/Program";
 import { Processor } from "./services/Processor";
@@ -162,38 +204,38 @@ export default class App extends Vue {
   options: any = {
     numberOfProcesses: {
       value: 75,
-      name: "Ilość procesorów"
+      name: "Number of processors"
     },
     minProcesses: {
       value: 50,
-      name: "Min procesów"
+      name: "Min processes"
     },
     maxProcesses: {
       value: 100,
-      name: "Max procesów"
+      name: "Max processes"
     },
     valueOfP: {
       value: 50,
-      name: "Wartość P"
+      name: "Value of P"
     },
     valueOfR: {
       value: 40,
-      name: "Wartość R"
+      name: "Value of R"
     },
     numberOfTries: {
       value: 5,
-      name: "Ilość prób dla symulacji 1"
+      name: "Number of tries for sim 1"
     },
     overloadCoefficient: {
       value: 0.95,
-      name: "Współczynnik przeciążenia",
+      name: "Overload coefficient",
       maxValue: 1
     }
   };
 
   chosenMode: Option = {
     value: "0",
-    name: "Wybór symulacji"
+    name: "Choice of simulation"
   };
 
   compareSimulations = false;
@@ -228,9 +270,50 @@ export default class App extends Vue {
   showDetails(processor: Processor) {
     console.log(processor);
   }
+
+  beforeEnter(element: any) {
+    requestAnimationFrame(() => {
+      if (!element.style.height) {
+        element.style.height = "0px";
+      }
+
+      element.style.display = null;
+    });
+  }
+
+  enter(element: any) {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        element.style.height = `${element.scrollHeight}px`;
+      });
+    });
+  }
+
+  afterEnter(element: any) {
+    element.style.height = null;
+  }
+
+  beforeLeave(element: any) {
+    requestAnimationFrame(() => {
+      if (!element.style.height) {
+        element.style.height = `${element.offsetHeight}px`;
+      }
+    });
+  }
+
+  leave(element: any) {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        element.style.height = "0px";
+      });
+    });
+  }
+
+  afterLeave(element: any) {
+    element.style.height = null;
+  }
 }
 </script>
-
 <style lang="scss">
 @import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@400&display=swap");
 body {
@@ -243,6 +326,11 @@ body {
   h3 {
     text-align: center;
   }
+}
+.enter-active,
+.leave-active {
+  overflow: hidden;
+  transition: height 1s linear;
 }
 .controls__container {
   display: flex;
@@ -308,6 +396,78 @@ body {
       justify-content: center;
       .detailedResults {
         margin: 2vh;
+      }
+    }
+  }
+  .spinner__container {
+    margin: 2vh 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    $offset: 187;
+    $duration: 1.4s;
+    p {
+      margin: 0.5vh 0;
+    }
+    .spinner {
+      margin: 4vh 0 1vh 0;
+      animation: rotator $duration linear infinite;
+    }
+
+    @keyframes rotator {
+      0% {
+        transform: rotate(0deg);
+      }
+      100% {
+        transform: rotate(270deg);
+      }
+    }
+
+    .path {
+      stroke-dasharray: $offset;
+      stroke-dashoffset: 0;
+      transform-origin: center;
+      animation: dash $duration ease-in-out infinite,
+        colors ($duration * 4) ease-in-out infinite;
+    }
+
+    @keyframes colors {
+      from {
+        stroke: black;
+      }
+
+      to {
+        stroke: black;
+      }
+      // 0% {
+      //   stroke: #4285f4;
+      // }
+      // 25% {
+      //   stroke: #de3e35;
+      // }
+      // 50% {
+      //   stroke: #f7c223;
+      // }
+      // 75% {
+      //   stroke: #1b9a59;
+      // }
+      // 100% {
+      //   stroke: #4285f4;
+      // }
+    }
+
+    @keyframes dash {
+      0% {
+        stroke-dashoffset: $offset;
+      }
+      50% {
+        stroke-dashoffset: $offset/4;
+        transform: rotate(135deg);
+      }
+      100% {
+        stroke-dashoffset: $offset;
+        transform: rotate(450deg);
       }
     }
   }

@@ -89,26 +89,23 @@ export class Program {
         this.displayResults = true;
           if (!this.compareStrategies) {
                 console.log(
-                  "Średnie obciążenie procesorów: " +
+                  "Average load: " +
                     this.savedResults[0].getAverageLoad
                 );
                 console.log(
-                  "Średnie odchylenie: " + this.savedResults[0].getAverageBias
+                  "Average deviation: " + this.savedResults[0].getAverageBias
                 );
-                console.log("Zapytań o obciążenie: " + this.savedResults[0].getQueries);
-                console.log("Migracje: " + this.savedResults[0].getMigrations);
+                console.log("Queries: " + this.savedResults[0].getQueries);
+                console.log("Migrations: " + this.savedResults[0].getMigrations);
           } else {
             let counter = 0;
             this.savedResults.forEach(strategy => {
                   console.log(
-                    `${counter + 1}. Średnie obciążenie procesorów: ` +
-                      strategy.getAverageLoad
+                    `${counter + 1}. Average load: ` + strategy.getAverageLoad
                   );
-                  console.log(
-                    "Średnie odchylenie: " + strategy.getAverageBias
-                  );
-                  console.log("Zapytań o obciążenie: " + strategy.getQueries);
-                  console.log("Migracje: " + strategy.getMigrations);
+                  console.log("Average deviation: " + strategy.getAverageBias);
+                  console.log("Queries: " + strategy.getQueries);
+                  console.log("Migrations: " + strategy.getMigrations);
                   counter++;
                 })
             }
@@ -181,7 +178,7 @@ export class Program {
               isDone = true;
             } else if (!(target.getLoad + process.getPower <= 100)) {
               this.queries++;
-              this.overloadCounter++;
+              // this.overloadCounter++;
               // if more than half of the processors get overloaded - the overload mode is turned on
               if (
                 this.overloadCounter >
@@ -257,10 +254,6 @@ export class Program {
         }
     }
 
-    // public thirdStrategy(): void {
-    //     for (let j = 0; j < this.processors.length; j++)
-    //         this.thirdStrategyProcessor(this.processors[j]);
-    // }
 
     public thirdStrategyProcess(process: Process): void {
         if (process != null) {
@@ -354,14 +347,11 @@ export class Program {
         this.steps++;
 
         this.processors.forEach((processor) => {
-            const previousLoad: number = processor.getLoad;
             this.load.push(processor.getLoad / 100);
             processor.doWork();
-            // if (mode == 2 && processor.getLoad != previousLoad)
-            //   this.thirdStrategy();
         });
-        if (this.isDone() || this.processCounter == 0) {
-            //  if (this.isDone()) {
+        // if (this.isDone() || this.processCounter == 0) {
+        if (this.isDone()) {
             let biasAverage = 0;
             this.load.forEach((d) => (biasAverage += d));
             biasAverage /= this.load.length;
