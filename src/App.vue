@@ -133,7 +133,11 @@
       >
         <div
           class="spinner__container"
-          v-show="!program.displayResults && !(program.processCounter > 0)"
+          v-show="
+            Object.keys(this.program).length > 0 &&
+              !program.displayResults &&
+              !(program.processCounter > 0)
+          "
         >
           <p>The processes have been distributed.</p>
           <p>Please wait while the tasks are still being processed.</p>
