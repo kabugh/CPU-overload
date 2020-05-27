@@ -161,7 +161,17 @@
         </div>
       </transition>
     </div>
-
+    <div
+      class="charts__container"
+      v-if="program.displayResults && compareSimulations"
+    >
+      <div class="chart__wrapper" v-for="(result, k) in chartResults" :key="k">
+        <bar-chart
+          :chart-data="result"
+          :chart-title="chartTitles[k]"
+        ></bar-chart>
+      </div>
+    </div>
     <div class="processors__container">
       <div
         class="processor"
@@ -189,22 +199,52 @@
 
 <script lang="ts">
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Component, Vue } from "vue-property-decorator";
+import { Component, Vue, Watch } from "vue-property-decorator";
 import { Program } from "./services/Program";
 import { Processor } from "./services/Processor";
+import BarChart from "./Chart.vue";
 
 interface Option {
   value: string;
   name: string;
   maxValue?: number;
 }
+interface Collection {
+  labels: string[];
+  datasets: {
+    label: string;
+    backgroundColor: string;
+    borderColor: string;
+    borderWidth: number;
+    hoverBackgroundColor: string;
+    hoverBorderColor: string;
+    data: number[];
+  }[];
+}
+
 @Component({
   filters: {
     fixedDecimal: (val: number) =>
       `${(Math.round(val * 100) / 100).toFixed(2)} %`
+  },
+  components: {
+    BarChart
   }
 })
 export default class App extends Vue {
+  chartTitles = ["Average Load", "Average Deviation", "Queries", "Migrations"];
+  chartResults: Record<string, any>[] = [];
+
+  @Watch("program.displayResults")
+  fillChart(): void {
+    const restructure = (input = []) =>
+      Object.keys(input[0] || {}).map(k =>
+        input.map(x => this.roundNumber(x[k]))
+      );
+
+    this.chartResults = restructure(this.program.savedResults);
+  }
+
   options: any = {
     numberOfProcesses: {
       value: 75,
@@ -315,6 +355,10 @@ export default class App extends Vue {
 
   afterLeave(element: any) {
     element.style.height = null;
+  }
+
+  roundNumber(number: number) {
+    return (Math.round(number * 100) / 100).toFixed(2);
   }
 }
 </script>
@@ -473,6 +517,24 @@ body {
         stroke-dashoffset: $offset;
         transform: rotate(450deg);
       }
+    }
+  }
+}
+.charts__container {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2vh;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  max-width: 60vw;
+  padding: 0 4vh;
+  margin: 0 auto;
+  @media (min-width: 1400px) {
+    grid-template-columns: repeat(2, 1fr);
+    max-width: 50vw;
+    .chart__wrapper {
+      margin: 0 4vw;
     }
   }
 }
