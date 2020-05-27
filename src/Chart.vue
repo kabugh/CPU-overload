@@ -21,7 +21,7 @@ export default {
         labels: ["Simulation 1", "Simulation 2", "Simulation 3"],
         datasets: [
           {
-            label: "Average load",
+            label: this.chartTitle,
             backgroundColor: "rgba(35, 203, 167, 1)",
             borderColor: "rgba(1, 152, 117, 1)",
             borderWidth: 2,
